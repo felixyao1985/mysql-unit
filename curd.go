@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"fmt"
-	_ "go-study/lib/mysql"
+	_ "github.com/mysql"
 	"reflect"
 	"strings"
 )
