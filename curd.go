@@ -10,20 +10,16 @@ import (
 	"strings"
 )
 
-//注意方法名大写，就是public
 func initDB(config SQL_Config) *sql.DB {
-	//构建连接："用户名:密码@tcp(IP:端口)/数据库?charset=utf8"
+
 	path := strings.Join([]string{config.UserName, ":", config.Password, "@tcp(", config.IP, ":", config.PORT, ")/", config.DBName, "?charset=utf8"}, "")
-	//打开数据库,前者是驱动名，所以要导入： _ "github.com/go-sql-driver/mysql"
+
 	con, err := sql.Open("mysql", path)
 	if err != nil {
 		checkErr(err)
 	}
-	//设置数据库最大连接数
 	con.SetConnMaxLifetime(100)
-	//设置上数据库最大闲置连接数
 	con.SetMaxIdleConns(10)
-	//验证连接
 	if err := con.Ping(); err != nil {
 		checkErr(err)
 	}
@@ -50,17 +46,6 @@ func New(config SQL_Config) *DB {
 	}
 }
 
-/*
-	字段对象
-
-	sql.XXX 是go 自带的SQL数据类型，可以处理null 字段。是个坑。
-	在rows.Scan 的时候 同事也要接受他的err数据，否则代码虽然不会报错，但是下条数据中为null的字段会继承上一条数据
-	IntSave    sql.NullInt64
-	StringSave sql.NullString
-	FloatSave  sql.NullFloat64
-	BoolSave   sql.NullBool
-
-*/
 type field struct {
 	Name       string
 	Tag        string
@@ -87,29 +72,16 @@ func (obj *_FieldsMap) GetFields() []field {
 
 func newFieldsMap(table string, dataobj interface{}) (*_FieldsMap, error) {
 
-	//reflect.Value.Elem() 表示获取原始值对应的反射对象，只有原始对象才能修改，当前反射对象是不能修改的
 	elem := reflect.ValueOf(dataobj).Elem()
-	//获取反射源的构造对象
 	reftype := elem.Type()
-	//fmt.Println("reftype",reflect.ValueOf(x))
-	//fmt.Println("dataobj",dataobj)
-	//fmt.Println("elem",elem)
-	//fmt.Println("reftype",reftype)
-	//fmt.Println(elem.FieldByName(reftype.Field(0).Name),elem.Field(0))
-	/*
-		这里都是对 对象源（类似 JAVA class）进行操作，并非对象（new 的对象）
-		reftype.NumField() 获取反射源的条目
-		reftype.Field()    获取字段
-	*/
+
 	var fields []field
 	for i, flen := 0, reftype.NumField(); i < flen; i++ {
 
 		var field field
-		//获取 class 属性的类型
 		field.Type = reftype.Field(i).Type.String()
 		field.Name = reftype.Field(i).Name
 		field.Tag = reftype.Field(i).Tag.Get("sql")
-		//获取对象name 的指针地址
 		field.Addr = elem.Field(i).Addr().Interface()
 
 		if reftype.Field(i).Tag.Get("key") == "" {
@@ -128,15 +100,12 @@ func newFieldsMap(table string, dataobj interface{}) (*_FieldsMap, error) {
 	}, nil
 }
 
-// NewFieldsMap 生成一个新的对象
 func (c *DB) NewFieldsMap(table string, dataobj interface{}) (*_FieldsMap, error) {
-	//fmt.Println("dataobj",dataobj)
 	nfm, _ := newFieldsMap(table, dataobj)
 	nfm.db = c.con
 	return nfm, nil
 }
 
-// GetFieldValues 提取结构体中的值数组
 func (fds *_FieldsMap) GetFieldValues() []interface{} {
 
 	var values []interface{}
@@ -147,7 +116,6 @@ func (fds *_FieldsMap) GetFieldValues() []interface{} {
 	return values
 }
 
-// GetFieldValue  提取结构体中的值
 func (fds *_FieldsMap) GetFieldValue(idx int) interface{} {
 
 	switch fds.fields[idx].Type {
@@ -165,8 +133,6 @@ func (fds *_FieldsMap) GetFieldValue(idx int) interface{} {
 	return nil
 }
 
-// 把要处理的字段 转化成 SQL string
-// example:" `field0`, `field1`, `field2`, `field3` "
 func (c *_FieldsMap) SQLFieldsStr() string {
 
 	var tagsStr string
@@ -186,7 +152,6 @@ func (c *_FieldsMap) SQLFieldsStr() string {
 	return tagsStr
 }
 
-// GetFieldSaveAddrs 获取结构体内每个"name"的 指针
 func (obj *_FieldsMap) GetFieldSaveAddrs() []interface{} {
 
 	var addrs []interface{}
@@ -197,7 +162,6 @@ func (obj *_FieldsMap) GetFieldSaveAddrs() []interface{} {
 	return addrs
 }
 
-// GetFieldSaveAddr 获取结构体内每个"name"的值
 func (fds *_FieldsMap) GetFieldSaveAddr(idx int) interface{} {
 
 	switch fds.fields[idx].Type {
@@ -215,36 +179,28 @@ func (fds *_FieldsMap) GetFieldSaveAddr(idx int) interface{} {
 	return nil
 }
 
-// MapBackToObject MAP化对象
 func (fds *_FieldsMap) MapBackToObject() interface{} {
 
-	//item := reflect.ValueOf(fds.dataobj).Elem()
-
 	for i, flen := 0, len(fds.fields); i < flen; i++ {
-		//fieldInfo := item.Type().Field(i)
 		switch fds.fields[i].Type {
 		case "int64":
 			if fds.fields[i].IntSave.Valid {
 				*fds.fields[i].Addr.(*int64) = fds.fields[i].IntSave.Int64
-				//item.FieldByName(fieldInfo.Name).SetInt(fds.fields[i].IntSave.Int64)
 			}
 			break
 		case "string":
 			if fds.fields[i].StringSave.Valid {
 				*fds.fields[i].Addr.(*string) = fds.fields[i].StringSave.String
-				//item.FieldByName(fieldInfo.Name).SetString(fds.fields[i].StringSave.String)
 			}
 			break
 		case "float64":
 			if fds.fields[i].FloatSave.Valid {
 				*fds.fields[i].Addr.(*float64) = fds.fields[i].FloatSave.Float64
-				//item.FieldByName(fieldInfo.Name).SetFloat(fds.fields[i].FloatSave.Float64)
 			}
 			break
 		case "bool":
 			if fds.fields[i].BoolSave.Valid {
 				*fds.fields[i].Addr.(*bool) = fds.fields[i].BoolSave.Bool
-				//item.FieldByName(fieldInfo.Name).SetBool(fds.fields[i].BoolSave.Bool)
 			}
 			break
 		default:
@@ -255,7 +211,6 @@ func (fds *_FieldsMap) MapBackToObject() interface{} {
 	return fds.dataobj
 }
 
-/*尝试处理数组*/
 func deepCopy(dst, src interface{}) error {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
@@ -266,32 +221,12 @@ func deepCopy(dst, src interface{}) error {
 
 func (c *DB) BrowseToSource(table string, sql string, dataobj interface{}) error {
 
-	/*
-		reflect中,最重要的是Value类,只有先获取到一个对象或者变量的Value对象后,我们才可以对这个对象或者变量进行更进一步的分析和处理。
-		reflect.ValueOf()方法获取Value对象。
-		获取变量的值使用value.Interface()方法，该方法会返回一个value的值，不过类型是interface。
-
-		对指针获取反射对象时，可以通过 reflect.Elem() 方法获取这个指针指向的元素类型。
-		这个获取过程被称为取元素，等效于对指针类型变量做了一个*操作
-	*/
 	elem := reflect.Indirect(reflect.ValueOf(dataobj))
 	reftype := elem.Type()
 
-	//获取元素对象的值
-	//fmt.Println("NewListFieldsMap elem:", elem)
-	//获取元素对象的类型
-	//fmt.Println("NewListFieldsMap reftype:", reftype)
-
 	elemobj := reflect.Indirect(reflect.New(reftype.Elem().Elem())).Addr()
 
-	//获取元素对象的元素类型
-	//fmt.Println("NewListFieldsMap reftype.Elem():", reftype.Elem())
-	//在挖一层
-	//fmt.Println("NewListFieldsMap reftype.Elem().Elem():", reftype.Elem().Elem())
-
-	//nobj := reflect.New(reftype).Interface()
 	obj, _ := newFieldsMap(table, elemobj.Interface())
-	//fmt.Println("BrowseToSource fieldsMap:", obj)
 	con := c.con
 	_sql := strings.Join([]string{"SELECT ", obj.SQLFieldsStr(), " FROM ", obj.table, sql}, "")
 
@@ -302,14 +237,12 @@ func (c *DB) BrowseToSource(table string, sql string, dataobj interface{}) error
 
 	for rows.Next() {
 		nobj := reflect.Indirect(reflect.New(reftype.Elem().Elem())).Addr()
-		//nobj := reflect.New(obj.reftype).Interface()
 		fieldsMap, err := newFieldsMap(obj.table, nobj.Interface())
 		if err != nil {
 			return err
 		}
 
 		err = rows.Scan(fieldsMap.GetFieldSaveAddrs()...)
-		//var name string
 		if err != nil {
 			return err
 		}
@@ -322,7 +255,6 @@ func (c *DB) BrowseToSource(table string, sql string, dataobj interface{}) error
 		return err
 	}
 	deepCopy(dataobj, elem.Interface())
-	fmt.Println("BrowseToSource fieldsMap elem:", elem)
 
 	return err
 }
