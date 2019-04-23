@@ -140,8 +140,10 @@ func (c *_FieldsMap) SQLFieldsStr() string {
 		if len(tagsStr) > 0 {
 			tagsStr += ", "
 		}
+		newTag := strings.Replace(c.fields[i].Tag, ".", "`.`", -1)
+		newTag = strings.Replace(newTag, " as ", "` as `", -1)
 		tagsStr += "`"
-		tagsStr += c.fields[i].Tag
+		tagsStr += newTag
 		tagsStr += "`"
 	}
 	if len(tagsStr) > 0 {

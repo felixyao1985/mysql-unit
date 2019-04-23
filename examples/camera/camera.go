@@ -1,6 +1,6 @@
 package camera
 
-import mu "mysql-unit"
+import mu "github.com/mysql-unit/mysql-unit"
 
 var MYSQL_CONFIG = mu.SQL_Config{
 	UserName: "root",
