@@ -1,4 +1,4 @@
-###封装mysql 工具
+###封装MYSQL LW orm
 
 make_camera.go 可根据数据库 生成对应的camera文件。
 

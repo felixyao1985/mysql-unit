@@ -2,33 +2,35 @@ package main
 
 import (
 	"database/sql"
-	"datacenter/camera"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/mysql-unit/examples/camera"
 )
 
 func initDB() *sql.DB {
 	//构建连接："用户名:密码@tcp(IP:端口)/数据库?charset=utf8"
-	path := strings.Join([]string{camera.MYSQL_CONFIG.UserName, ":", camera.MYSQL_CONFIG.Password, "@tcp(", camera.MYSQL_CONFIG.IP, ":", camera.MYSQL_CONFIG.PORT, ")/", "information_schema", "?charset=utf8"}, "")
+	config := camera.Config
+	path := config.UserName + ":" + config.Password + "@tcp(" + config.IP + ":" + config.PORT + ")/" + config.DBName + "?charset=utf8"
 	//打开数据库,前者是驱动名，所以要导入： _ "github.com/go-sql-driver/mysql"
-	con, err := sql.Open("mysql", path)
+	conn, err := sql.Open("mysql", path)
 	if err != nil {
 		log.Fatal(err)
 	}
 	//设置数据库最大连接数
-	con.SetConnMaxLifetime(100)
+	conn.SetConnMaxLifetime(100)
 	//设置上数据库最大闲置连接数
-	con.SetMaxIdleConns(10)
+	conn.SetMaxIdleConns(10)
 	//验证连接
-	if err := con.Ping(); err != nil {
+	if err := conn.Ping(); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("connnect success")
 
-	return con
+	return conn
 
 }
 
@@ -38,7 +40,7 @@ var DB = initDB()
 
 func getTablelist() []string {
 
-	sql := "select table_name from `tables` where `table_schema`='" + camera.MYSQL_CONFIG.DBName + "' and `table_type`='BASE TABLE'"
+	sql := "select table_name from `tables` where `table_schema`='" + camera.Config.DBName + "' and `table_type`='BASE TABLE'"
 	fmt.Println(sql)
 	var list = []string{}
 	//DB.BrowseToSource("user",sql,&list)
@@ -59,7 +61,7 @@ func getTablelist() []string {
 
 func getColumnCameraList(table string) []string {
 
-	sql := "select column_name,COLUMN_TYPE,COLUMN_KEY from information_schema.columns where table_schema='" + camera.MYSQL_CONFIG.DBName + "' and table_name='" + table + "'"
+	sql := "select column_name,COLUMN_TYPE,COLUMN_KEY from information_schema.columns where table_schema='" + camera.Config.DBName + "' and table_name='" + table + "'"
 
 	var list = []string{}
 	//DB.BrowseToSource("user",sql,&list)
@@ -163,7 +165,7 @@ var ` + tableColumn + `   = "` + table + `"
 
 func (c *` + tableName + `) Browse(sql string,row int,start int) ([]` + tableName + `,error){
 
-	_sql := strings.Join([]string{sql," limt ",strconv.Itoa(start)," , ",strconv.Itoa(row)}, "")
+	_sql := sql + " limt " + strconv.Itoa(start) + " , " + strconv.Itoa(row)
 	objs , _:= c.BrowseAll(_sql)
 	return objs, nil
 }

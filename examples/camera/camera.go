@@ -1,8 +1,8 @@
 package camera
 
-import mu "github.com/mysql-unit/mysql-unit"
+import mu "github.com/mysql-unit"
 
-var MYSQL_CONFIG = mu.SQL_Config{
+var Config = mu.Config{
 	UserName: "root",
 	Password: "root",
 	IP:       "172.0.0.1",
@@ -10,7 +10,7 @@ var MYSQL_CONFIG = mu.SQL_Config{
 	DBName:   "test",
 }
 
-var DB = mu.New(MYSQL_CONFIG)
+var DB = mu.New(Config)
 
 func New(camera interface{}) {
 	println(camera)

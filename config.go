@@ -1,6 +1,6 @@
 package mysql_unit
 
-type SQL_Config struct {
+type Config struct {
 	UserName string
 	Password string
 	IP       string

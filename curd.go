@@ -5,33 +5,34 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"fmt"
-	_ "github.com/mysql"
 	"reflect"
 	"strings"
+
+	_ "github.com/mysql"
 )
 
-func initDB(config SQL_Config) *sql.DB {
+func initDB(config Config) *sql.DB {
 
-	path := strings.Join([]string{config.UserName, ":", config.Password, "@tcp(", config.IP, ":", config.PORT, ")/", config.DBName, "?charset=utf8"}, "")
+	path := config.UserName + ":" + config.Password + "@tcp(" + config.IP + ":" + config.PORT + ")/" + config.DBName + "?charset=utf8"
 
-	con, err := sql.Open("mysql", path)
+	conn, err := sql.Open("mysql", path)
 	if err != nil {
 		checkErr(err)
 	}
-	con.SetConnMaxLifetime(100)
-	con.SetMaxIdleConns(10)
-	if err := con.Ping(); err != nil {
+	conn.SetConnMaxLifetime(100)
+	conn.SetMaxIdleConns(10)
+	if err := conn.Ping(); err != nil {
 		checkErr(err)
 	}
 	fmt.Println("connnect success")
 
-	return con
+	return conn
 
 }
 
 func checkErr(err error) {
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 }
 
@@ -39,7 +40,7 @@ type DB struct {
 	con *sql.DB
 }
 
-func New(config SQL_Config) *DB {
+func New(config Config) *DB {
 	con := initDB(config)
 	return &DB{
 		con,
@@ -58,7 +59,7 @@ type field struct {
 	BoolSave   sql.NullBool
 }
 
-type _FieldsMap struct {
+type FieldsMap struct {
 	dataobj interface{}
 	reftype reflect.Type
 	fields  []field
@@ -66,11 +67,11 @@ type _FieldsMap struct {
 	db      *sql.DB
 }
 
-func (obj *_FieldsMap) GetFields() []field {
+func (obj *FieldsMap) GetFields() []field {
 	return obj.fields
 }
 
-func newFieldsMap(table string, dataobj interface{}) (*_FieldsMap, error) {
+func newFieldsMap(table string, dataobj interface{}) (*FieldsMap, error) {
 
 	elem := reflect.ValueOf(dataobj).Elem()
 	reftype := elem.Type()
@@ -92,7 +93,7 @@ func newFieldsMap(table string, dataobj interface{}) (*_FieldsMap, error) {
 		fields = append(fields, field)
 	}
 
-	return &_FieldsMap{
+	return &FieldsMap{
 		dataobj: dataobj,
 		reftype: reftype,
 		fields:  fields,
@@ -100,13 +101,13 @@ func newFieldsMap(table string, dataobj interface{}) (*_FieldsMap, error) {
 	}, nil
 }
 
-func (c *DB) NewFieldsMap(table string, dataobj interface{}) (*_FieldsMap, error) {
+func (c *DB) NewFieldsMap(table string, dataobj interface{}) (*FieldsMap, error) {
 	nfm, _ := newFieldsMap(table, dataobj)
 	nfm.db = c.con
 	return nfm, nil
 }
 
-func (fds *_FieldsMap) GetFieldValues() []interface{} {
+func (fds *FieldsMap) GetFieldValues() []interface{} {
 
 	var values []interface{}
 	for i, flen := 0, len(fds.fields); i < flen; i++ {
@@ -116,7 +117,7 @@ func (fds *_FieldsMap) GetFieldValues() []interface{} {
 	return values
 }
 
-func (fds *_FieldsMap) GetFieldValue(idx int) interface{} {
+func (fds *FieldsMap) GetFieldValue(idx int) interface{} {
 
 	switch fds.fields[idx].Type {
 	case "int64":
@@ -133,7 +134,7 @@ func (fds *_FieldsMap) GetFieldValue(idx int) interface{} {
 	return nil
 }
 
-func (c *_FieldsMap) SQLFieldsStr() string {
+func (c *FieldsMap) SQLFieldsStr() string {
 
 	var tagsStr string
 	for i, flen := 0, len(c.fields); i < flen; i++ {
@@ -154,7 +155,7 @@ func (c *_FieldsMap) SQLFieldsStr() string {
 	return tagsStr
 }
 
-func (obj *_FieldsMap) GetFieldSaveAddrs() []interface{} {
+func (obj *FieldsMap) GetFieldSaveAddrs() []interface{} {
 
 	var addrs []interface{}
 	for i, flen := 0, len(obj.fields); i < flen; i++ {
@@ -164,7 +165,7 @@ func (obj *_FieldsMap) GetFieldSaveAddrs() []interface{} {
 	return addrs
 }
 
-func (fds *_FieldsMap) GetFieldSaveAddr(idx int) interface{} {
+func (fds *FieldsMap) GetFieldSaveAddr(idx int) interface{} {
 
 	switch fds.fields[idx].Type {
 	case "int64":
@@ -181,7 +182,7 @@ func (fds *_FieldsMap) GetFieldSaveAddr(idx int) interface{} {
 	return nil
 }
 
-func (fds *_FieldsMap) MapBackToObject() interface{} {
+func (fds *FieldsMap) MapBackToObject() interface{} {
 
 	for i, flen := 0, len(fds.fields); i < flen; i++ {
 		switch fds.fields[i].Type {

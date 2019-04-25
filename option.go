@@ -3,14 +3,13 @@ package mysql_unit
 import (
 	"log"
 	"reflect"
-	"strings"
 )
 
-func (obj *_FieldsMap) Browse(sql string) ([]interface{}, error) {
-	con := obj.db
-	_sql := strings.Join([]string{"SELECT ", obj.SQLFieldsStr(), " FROM ", obj.table, sql}, "")
+func (obj *FieldsMap) Browse(sql string) ([]interface{}, error) {
+	conn := obj.db
+	_sql := "SELECT " + obj.SQLFieldsStr() + " FROM " + obj.table + sql
 
-	rows, err := con.Query(_sql)
+	rows, err := conn.Query(_sql)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,11 +39,11 @@ func (obj *_FieldsMap) Browse(sql string) ([]interface{}, error) {
 
 }
 
-func (obj *_FieldsMap) View(id int) (interface{}, error) {
-	con := obj.db
-	_sql := strings.Join([]string{"SELECT ", obj.SQLFieldsStr(), " FROM ", obj.table, " where id = ? "}, "")
+func (obj *FieldsMap) View(id int) (interface{}, error) {
+	conn := obj.db
+	_sql := "SELECT " + obj.SQLFieldsStr() + " FROM " + obj.table + " where id = ? "
 
-	row := con.QueryRow(_sql, id)
+	row := conn.QueryRow(_sql, id)
 
 	nobj := reflect.New(obj.reftype).Interface()
 	fieldsMap, err := newFieldsMap(obj.table, nobj)
@@ -64,8 +63,8 @@ func (obj *_FieldsMap) View(id int) (interface{}, error) {
 
 }
 
-func (obj *_FieldsMap) Insert() (int64, error) {
-	con := obj.db
+func (obj *FieldsMap) Insert() (int64, error) {
+	conn := obj.db
 	var vs string
 	var tagsStr string
 	var values []interface{}
@@ -95,7 +94,7 @@ func (obj *_FieldsMap) Insert() (int64, error) {
 
 	sqlstr := "INSERT INTO `" + obj.table + "` (" + tagsStr + ") " +
 		"VALUES (" + vs + ")"
-	tx, _ := con.Begin()
+	tx, _ := conn.Begin()
 	res, err := tx.Exec(sqlstr, values...)
 	if err != nil {
 		return 0, err
@@ -105,8 +104,8 @@ func (obj *_FieldsMap) Insert() (int64, error) {
 	return res.LastInsertId()
 }
 
-func (obj *_FieldsMap) Update() (int64, error) {
-	con := obj.db
+func (obj *FieldsMap) Update() (int64, error) {
+	conn := obj.db
 	var tagsStr string
 	var whereSql string
 	var keyVal int64 = 0
@@ -142,7 +141,7 @@ func (obj *_FieldsMap) Update() (int64, error) {
 
 	sqlstr := "UPDATE `" + obj.table + "` SET " + tagsStr + whereSql
 
-	tx, _ := con.Begin()
+	tx, _ := conn.Begin()
 	res, err := tx.Exec(sqlstr, values...)
 	if err != nil {
 		return 0, err
@@ -153,8 +152,8 @@ func (obj *_FieldsMap) Update() (int64, error) {
 	return res.LastInsertId()
 }
 
-func (obj *_FieldsMap) Remove() (int64, error) {
-	con := obj.db
+func (obj *FieldsMap) Remove() (int64, error) {
+	conn := obj.db
 	var whereSql string
 	var keyVal int64 = 0
 	for i, flen := 0, len(obj.fields); i < flen; i++ {
@@ -171,7 +170,7 @@ func (obj *_FieldsMap) Remove() (int64, error) {
 
 	sqlstr := "DELETE FROM `" + obj.table + "`  " + whereSql
 
-	tx, _ := con.Begin()
+	tx, _ := conn.Begin()
 	res, err := tx.Exec(sqlstr, keyVal)
 	if err != nil {
 		log.Fatal("Exec fail", err)
@@ -182,11 +181,11 @@ func (obj *_FieldsMap) Remove() (int64, error) {
 	return res.RowsAffected()
 }
 
-func (obj *_FieldsMap) ViewToSource(id int) error {
-	con := obj.db
-	_sql := strings.Join([]string{"SELECT ", obj.SQLFieldsStr(), " FROM ", obj.table, " where id = ? "}, "")
+func (obj *FieldsMap) ViewToSource(id int) error {
+	conn := obj.db
+	_sql := "SELECT " + obj.SQLFieldsStr() + " FROM " + obj.table + " where id = ? "
 
-	row := con.QueryRow(_sql, id)
+	row := conn.QueryRow(_sql, id)
 	err := row.Scan(obj.GetFieldSaveAddrs()...)
 
 	if err != nil {
