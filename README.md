@@ -16,4 +16,4 @@ make_camera.go 可根据数据库 生成对应的camera文件。
 ```
 
 测试 pull request
-测试 拉分支
+测试 拉分支 不好
