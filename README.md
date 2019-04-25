@@ -14,3 +14,5 @@ make_camera.go 可根据数据库 生成对应的camera文件。
         INTEGRATION string `sql:"integration"`
     }
 ```
+
+测试 pull request
